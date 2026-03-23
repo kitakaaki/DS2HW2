@@ -1,0 +1,5 @@
+*.txt
+*.exe
+*.out
+.vscode/
+*.json
