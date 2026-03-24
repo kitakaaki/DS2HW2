@@ -5,14 +5,14 @@
 #include <string>
 
 struct Data {
-  int serialNumber = 0;
+  int serialNumber = 1;
   std::string schoolCode;
   std::string schoolName;
   std::string departmentCode;
   std::string departmentName;
   std::string dayNight;
   std::string level;
-  int studentCount = 0;
+  int studentCount = 1;
   int teacherCount = 0;
   int graduateCount = 0;
   std::string countyCity;
