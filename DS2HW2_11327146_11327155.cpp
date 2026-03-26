@@ -71,21 +71,120 @@ class AVLtree {
 
     int nodeCount;
 
-    void rotateLL(Node* node) {}
+    int getNodeHeight(Node* node) {
+      return node ? node->height : 0;
+    }
 
-    void rotateRR(Node* node) {}
+    Node* rotateLL(Node* node) {
+      Node *newNode = node->left;
+      node->left = newNode->right;
+      newNode->right = node;
+      updateHeight(node);
+      updateHeight(newNode);
+      return newNode;
+    }
 
-    void rotateLR(Node* node) {}
+    Node* rotateRR(Node* node) {
+      Node *newNode = node->right;
+      node->right = newNode->left;
+      newNode->left = node;
+      updateHeight(node);
+      updateHeight(newNode);
+      return newNode;
+    }
 
-    void rotateRL(Node* node) {}
+    Node* rotateLR(Node* node) {
+      node->left = rotateRR(node->left);
+      return rotateLL(node);
+    }
+
+    Node* rotateRL(Node* node) {
+      node->right = rotateLL(node->right);
+      return rotateRR(node);
+    }
+  
+    Node* verifyBalance(Node* node) {
+      int balanceFactor = getBalanceFactor(node);
+      if (balanceFactor > 1) {
+        if (getBalanceFactor(node->left) >= 0) {
+          return rotateLL(node);
+        } else {
+          return rotateLR(node);
+        }
+      } else if (balanceFactor < -1) {
+        if (getBalanceFactor(node->right) <= 0) {
+          return rotateRR(node);
+        } else {
+          return rotateRL(node);
+        }
+      }
+      return node;
+    }
+
+    int getBalanceFactor(Node* node) {
+      int leftHeight = getNodeHeight(node->left);
+      int rightHeight = getNodeHeight(node->right);
+      return leftHeight - rightHeight;
+    }
+
+    void updateHeight(Node* node) {
+      int leftHeight = getNodeHeight(node->left);
+      int rightHeight = getNodeHeight(node->right);
+      node->height = std::max(leftHeight, rightHeight) + 1;
+    }
   public:
-    void insert(std::string key, int value) {}
+    Node* insertNode(std::string key, int value, Node* node) {
+      if (key == node->key) {
+        node->values.push_back(value);
+        return node;
+      } else if (key < node->key) {
+        if (node->left) {
+          node->left = insertNode(key, value, node->left);
+        } else {
+          node->left = new Node{key, {value}, nullptr, nullptr, 1};
+          nodeCount++;
+        }
+      } else {
+        if (node->right) {
+          node->right = insertNode(key, value, node->right);
+        } else {
+          node->right = new Node{key, {value}, nullptr, nullptr, 1};
+          nodeCount++;
+        }
+      }
+      updateHeight(node);
+      node = verifyBalance(node);
+      return node;
+    }
+
+    void insert(std::string key, int value) {
+      if (!root) {
+        nodeCount++;
+        root = new Node{key, {value}, nullptr, nullptr, 1};
+        treeHeight = root->height;
+        return;
+      }
+      root = insertNode(key, value, root);
+      treeHeight = root->height;
+    }
 
     int height() { return treeHeight; }
 
     int count() { return nodeCount; }
 
-    void clear() {}
+    void clearTrees(Node* node) {
+      if (!node) return;
+      clearTrees(node->left);
+      clearTrees(node->right);
+      delete node;
+    }
+
+    void clear() {
+      clearTrees(root);
+      root = nullptr;
+      treeHeight = 0;
+      nodeCount = 0;
+    }
 
     std::vector<int> rootData() { 
       if (root)  
@@ -195,9 +294,9 @@ class Menu {
           avlTree.insert(data.schoolName, data.serialNumber);
         }
       avlTreeExist = true;
-      }
-      if (avlTreeExist)
+      } else {
         std::cout << "### AVL tree has been built. ###\n";
+      }
       std::cout << "Tree height = " << avlTree.height() << "\n";
       std::cout << "Number of nodes = " << avlTree.count() << "\n";
       IO::displayNodes(makeNodesList(avlTree.rootData()));
