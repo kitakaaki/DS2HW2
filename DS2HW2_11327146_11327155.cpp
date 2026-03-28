@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <iterator>
 
 struct Data {
   int serialNumber = 1;
@@ -24,31 +25,231 @@ struct Data {
 
 class TwoThreeTree {
   private:
+    struct Entry {
+        int key;
+        std::vector<int> serial;
+    };
+
     struct Node {
+      Entry keys[3];
+      Node* child[4];
+      int count;
+
+      Node() : count(0) {
+          for (int i = 0; i < 4; i++) child[i] = nullptr;
+      }
+
+      Node(int key, int serial) : count(1) {
+        keys[0].key = key;
+        keys[0].serial.push_back(serial);
+        for (int i = 0; i < 4; i++) child[i] = nullptr;
+      }
+
+      Node(int key, const std::vector<int>& serial) : count(1) {
+          keys[0].key = key;
+          keys[0].serial = serial;
+          for (int i = 0; i < 4; i++) child[i] = nullptr;
+      }
+
+      ~Node() {
+        for (int i = 0; i < 4; i++) {
+            if (child[i] != nullptr) {
+                delete child[i];
+                child[i] = nullptr;
+            }
+        }
+      }
+
+      bool isLeaf() { return child[0] == nullptr; }
+    };
+
+    struct SplitData {
+      bool active = false;
       int key;
-      std::vector<int> values;
-      std::vector<Node*> children;
-      Node* parent;
-      int keyCount;
+      std::vector<int> serial;
+      Node* rightNode = nullptr;
     };
 
     Node* root = nullptr;
-
     int treeHeight;
-
     int nodeCount;
+
+    // for adding key to current nodes, help sorting the keys
+    void addKeyToLeaf(Node* curr, int key, int serial) {
+      int i = curr->count - 1;
+        // shifting position for the new inserted keys
+      while (i >= 0 && key < curr->keys[i].key) {
+          curr->keys[i + 1] = curr->keys[i];
+          i--;
+      }
+      
+      // insert the new key
+      curr->keys[i + 1].key = key;
+      curr->keys[i + 1].serial.clear();
+      curr->keys[i + 1].serial.push_back(serial);
+      curr->count++;
+    }
+
+    // for adding key to current nodes, help sorting the keys, and help shifting the key's childs to the correct position
+    void addKeyToInternalNode(Node* curr, int key, const std::vector<int>& serial, Node* rightNode) {
+        int i = curr->count - 1;
+
+        // shifting position for the new inserted keys
+        while (i >= 0 && key < curr->keys[i].key) {
+            curr->keys[i + 1] = curr->keys[i];
+            curr->child[i + 2] = curr->child[i + 1];
+            i--;
+        }
+
+        // insert the new key
+        curr->keys[i + 1].key = key;
+        curr->keys[i + 1].serial = serial;
+        // shifting new key's child to the correct pos
+        curr->child[i + 2] = rightNode;
+        curr->count++;
+    }
+
+    // for splitting the nodes
+    Node* split(Node* curr, SplitData* lastSplit) {
+      lastSplit->active = true;
+      lastSplit->key = curr->keys[1].key;
+      lastSplit->serial = curr->keys[1].serial;
+      Node* newNode = new Node(curr->keys[2].key, curr->keys[2].serial);
+      lastSplit->rightNode = newNode;
+      nodeCount++;
+      if (!curr->isLeaf()) {
+        // assigning rightnode's child
+        newNode->child[0] = curr->child[2];
+        newNode->child[1] = curr->child[3];
+        curr->child[2] = nullptr;
+        curr->child[3] = nullptr;
+      }
+      curr->count = 1; // deleting the node's right key 
+      return curr;
+    }
+
+    Node* insertNode(int key, int serial, Node* curr, SplitData* lastSplit) {
+      if (curr == nullptr) return nullptr;
+      // for checking if the key is the same
+      for (int i = 0; i < curr->count; i++) {
+          if (curr->keys[i].key == key) {
+              curr->keys[i].serial.push_back(serial);
+              return curr;
+          }
+      }
+
+      if (curr->isLeaf()) {
+          addKeyToLeaf(curr, key, serial);
+          // if node got three keys then it needs to split
+          if (curr->count == 3) {
+              return split(curr, lastSplit); 
+          }
+          return curr;
+      }
+
+      // if current is not a leaf, find the correct child to descend
+      Node* nextChild = nullptr;
+      if (key < curr->keys[0].key) {
+          nextChild = curr->child[0];
+      } else if (curr->count == 1 || key < curr->keys[1].key) {
+          nextChild = curr->child[1];
+      } else {
+          nextChild = curr->child[2];
+      }
+
+      // actually doesn't need to catch the result
+      Node* result = insertNode(key, serial, nextChild, lastSplit);
+
+      // check if there's new key ascended
+      if (lastSplit->active) {
+        addKeyToInternalNode(curr, lastSplit->key, lastSplit->serial, lastSplit->rightNode);
+        lastSplit->active = false;
+
+        if (curr->count == 3) {
+            return split(curr, lastSplit);
+        }
+      }
+
+      return curr;
+    }
+
+    // for debug purpose, rotated 90 deg
+    void printRecursive(Node* curr, int depth) {
+        if (!curr) return;
+        if (curr->count == 2) {
+            printRecursive(curr->child[2], depth + 1);
+        } else {
+            printRecursive(curr->child[1], depth + 1);
+        }
+        std::string indent = "";
+        for (int i = 0; i < depth; i++) indent += "    ";
+
+        if (curr->count == 2) {
+            std::cout << indent << "[ " << curr->keys[1].key << " ]" << std::endl;
+            printRecursive(curr->child[1], depth + 1);
+            std::cout << indent << "[ " << curr->keys[0].key << " ]" << std::endl;
+        } else {
+            std::cout << indent << "[ " << curr->keys[0].key << " ]" << std::endl;
+        }
+        printRecursive(curr->child[0], depth + 1);
+    }
+
+    
   public:
-    void insert(int key, int value) {}
+    // for debug purpose
+    void printTree() {
+      std::cout << "\n--- 2-3 Tree Structure (Rotated 90 degrees) ---\n";
+      if (!root) {
+          std::cout << "Empty Tree" << std::endl;
+      } else {
+          printRecursive(root, 0);
+      }
+      std::cout << "----------------------------------------------\n";
+    }
+    
+    void insert(int key, int serial) {
+      if (!root) {
+        root = new Node{key, serial};
+        nodeCount++;
+        treeHeight++;
+        return;
+      }
+      SplitData lastSplit;
+      root = insertNode(key, serial, root, &lastSplit);
+
+      if (lastSplit.active) {
+        // create new root node, and increase tree height
+        Node* newRoot = new Node(lastSplit.key, lastSplit.serial);
+        newRoot->child[0] = root;
+        newRoot->child[1] = lastSplit.rightNode;
+        
+        root = newRoot;
+        treeHeight++;
+        nodeCount++;
+      }
+    }
 
     int height() { return treeHeight; }
 
     int count() { return nodeCount; }
 
-    void clear() {}
+    void clear() {
+      if (root != nullptr) {
+            delete root;
+            root = nullptr;
+        }
+        treeHeight = 0;
+        nodeCount = 0;
+      }
 
-    std::vector<int> rootData() { 
-      if (root)  
-      return root->values;
+    std::vector<std::vector<int>> rootData() { 
+      std::vector<std::vector<int>> serials;
+      if (root) {
+        for (int i = 0; i < root->count; i++) {
+          serials.push_back(root->keys[i].serial);
+        }
+      }
+      return serials;
       return {}; 
     }
 
@@ -149,7 +350,24 @@ class IO {
         std::cout << data.studentCount << " " << data.graduateCount << "\n";
       }
     }
-};
+
+    static void displayNodes(const std::vector<std::vector<Data>>& datas) {
+        int displayIndex = 1;
+        for (const auto& keyGroup : datas) {
+            for (const auto& data : keyGroup) {
+                std::cout << displayIndex++ << ": ";
+                std::cout << "[" << data.serialNumber << "] ";
+                
+                std::cout << data.schoolName << " " 
+                          << data.departmentName << " "
+                          << data.dayNight << " " 
+                          << data.level << " "
+                          << data.studentCount << " " 
+                          << data.graduateCount << "\n";
+            }
+        }
+    };
+  };
 
 class Menu {
   private:
@@ -212,6 +430,33 @@ class Menu {
       }
       return nodesList;
     }
+
+    std::vector<std::vector<Data>> makeNodesList(const std::vector<std::vector<int>>& pairs) {
+        std::vector<std::vector<Data>> nodesList;
+
+        // 第一層迴圈：遍歷每一個「節點中的 Key」
+        for (size_t i = 0; i < pairs.size(); i++) {
+            std::vector<Data> currentKeyData; // 用來存放當前這個 Key 對應的所有 serial 資料
+
+            // 第二層迴圈：遍歷該 Key 擁有的所有 serial numbers
+            for (size_t j = 0; j < pairs[i].size(); j++) {
+                int targetSerial = pairs[i][j];
+
+                // 根據 serial number 找到對應的資料
+                // 提醒：如果你的 serial 是從 1 開始，索引要 -1
+                int index = targetSerial - 1;
+
+                if (index >= 0 && index < (int)dataList.size()) {
+                    currentKeyData.push_back(dataList[index]);
+                }
+            }
+
+            // 將這一組資料放入大容器中
+            nodesList.push_back(currentKeyData);
+        }
+
+        return nodesList;
+    }
   public:
     void run() {
       std::string choice;
@@ -244,4 +489,3 @@ int main () {
   menu.run();
   return 0;
 }
-
