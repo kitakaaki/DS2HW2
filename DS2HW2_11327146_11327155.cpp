@@ -243,9 +243,9 @@ class IO {
       for (const auto& data : datas) {
         std::cout << serialIndex++ << ": [";
         std::cout << data.serialNumber << "] ";
-        std::cout << data.schoolName << " " << data.departmentName << " ";
-        std::cout << data.dayNight << " " << data.level << " ";
-        std::cout << data.studentCount << " " << data.graduateCount << "\n";
+        std::cout << data.schoolName << ", " << data.departmentName << ", ";
+        std::cout << data.dayNight << ", " << data.level << ", ";
+        std::cout << data.studentCount << ", " << data.graduateCount << "\n";
       }
     }
 };
@@ -260,13 +260,16 @@ class Menu {
 
     void mission1() {
       while (true) {
-        std::cout << "Input a file number ([0] Quit): ";
+        dataListExist = false;
+        std::cout << "\nInput a file number ([0] Quit): ";
         std::string fileNumber;
         std::cin >> fileNumber;
-        if (fileNumber == "0")
+        if (fileNumber == "0") {
+          std::cout << "\n";
           return;
+        }
         if (!IO::readData(fileNumber, dataList)) {
-          std::cout << "\n### input" << fileNumber << ".txt does not exist! ###\n\n";
+          std::cout << "\n### input" << fileNumber << ".txt does not exist! ###\n";
         } else {
           break;
         }
@@ -343,4 +346,3 @@ int main () {
   menu.run();
   return 0;
 }
-
