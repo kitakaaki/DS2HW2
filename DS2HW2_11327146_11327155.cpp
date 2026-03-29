@@ -10,17 +10,12 @@
 
 struct Data {
   int serialNumber = 1;
-  std::string schoolCode;
   std::string schoolName;
-  std::string departmentCode;
   std::string departmentName;
   std::string dayNight;
   std::string level;
   int studentCount = 1;
-  int teacherCount = 0;
   int graduateCount = 0;
-  std::string countyCity;
-  std::string systemType;
 };
 
 class TwoThreeTree {
@@ -157,8 +152,7 @@ class TwoThreeTree {
           nextChild = curr->child[2];
       }
 
-      // actually doesn't need to catch the result
-      Node* result = insertNode(key, serial, nextChild, lastSplit);
+      insertNode(key, serial, nextChild, lastSplit);
 
       // check if there's new key ascended
       if (lastSplit->active) {
@@ -173,40 +167,7 @@ class TwoThreeTree {
       return curr;
     }
 
-    // for debug purpose, rotated 90 deg
-    void printRecursive(Node* curr, int depth) {
-        if (!curr) return;
-        if (curr->count == 2) {
-            printRecursive(curr->child[2], depth + 1);
-        } else {
-            printRecursive(curr->child[1], depth + 1);
-        }
-        std::string indent = "";
-        for (int i = 0; i < depth; i++) indent += "    ";
-
-        if (curr->count == 2) {
-            std::cout << indent << "[ " << curr->keys[1].key << " ]" << std::endl;
-            printRecursive(curr->child[1], depth + 1);
-            std::cout << indent << "[ " << curr->keys[0].key << " ]" << std::endl;
-        } else {
-            std::cout << indent << "[ " << curr->keys[0].key << " ]" << std::endl;
-        }
-        printRecursive(curr->child[0], depth + 1);
-    }
-
-    
   public:
-    // for debug purpose
-    void printTree() {
-      std::cout << "\n--- 2-3 Tree Structure (Rotated 90 degrees) ---\n";
-      if (!root) {
-          std::cout << "Empty Tree" << std::endl;
-      } else {
-          printRecursive(root, 0);
-      }
-      std::cout << "----------------------------------------------\n";
-    }
-    
     void insert(int key, int serial) {
       if (!root) {
         root = new Node{key, serial};
@@ -242,15 +203,14 @@ class TwoThreeTree {
         nodeCount = 0;
       }
 
-    std::vector<std::vector<int>> rootData() { 
-      std::vector<std::vector<int>> serials;
+    std::vector<int> rootData() { 
+      std::vector<int> serials;
       if (root) {
         for (int i = 0; i < root->count; i++) {
-          serials.push_back(root->keys[i].serial);
+          serials.insert(serials.end(), root->keys[i].serial.begin(), root->keys[i].serial.end());
         }
       }
       return serials;
-      return {}; 
     }
 
     TwoThreeTree() : treeHeight(0), nodeCount(0) {}
@@ -272,21 +232,120 @@ class AVLtree {
 
     int nodeCount;
 
-    void rotateLL(Node* node) {}
+    int getNodeHeight(Node* node) {
+      return node ? node->height : 0;
+    }
 
-    void rotateRR(Node* node) {}
+    Node* rotateLL(Node* node) {
+      Node *newNode = node->left;
+      node->left = newNode->right;
+      newNode->right = node;
+      updateHeight(node);
+      updateHeight(newNode);
+      return newNode;
+    }
 
-    void rotateLR(Node* node) {}
+    Node* rotateRR(Node* node) {
+      Node *newNode = node->right;
+      node->right = newNode->left;
+      newNode->left = node;
+      updateHeight(node);
+      updateHeight(newNode);
+      return newNode;
+    }
 
-    void rotateRL(Node* node) {}
+    Node* rotateLR(Node* node) {
+      node->left = rotateRR(node->left);
+      return rotateLL(node);
+    }
+
+    Node* rotateRL(Node* node) {
+      node->right = rotateLL(node->right);
+      return rotateRR(node);
+    }
+  
+    Node* verifyBalance(Node* node) {
+      int balanceFactor = getBalanceFactor(node);
+      if (balanceFactor > 1) {
+        if (getBalanceFactor(node->left) >= 0) {
+          return rotateLL(node);
+        } else {
+          return rotateLR(node);
+        }
+      } else if (balanceFactor < -1) {
+        if (getBalanceFactor(node->right) <= 0) {
+          return rotateRR(node);
+        } else {
+          return rotateRL(node);
+        }
+      }
+      return node;
+    }
+
+    int getBalanceFactor(Node* node) {
+      int leftHeight = getNodeHeight(node->left);
+      int rightHeight = getNodeHeight(node->right);
+      return leftHeight - rightHeight;
+    }
+
+    void updateHeight(Node* node) {
+      int leftHeight = getNodeHeight(node->left);
+      int rightHeight = getNodeHeight(node->right);
+      node->height = std::max(leftHeight, rightHeight) + 1;
+    }
+
+    void clearTrees(Node* node) {
+      if (!node) return;
+      clearTrees(node->left);
+      clearTrees(node->right);
+      delete node;
+    }
   public:
-    void insert(std::string key, int value) {}
+    Node* insertNode(std::string key, int value, Node* node) {
+      if (key == node->key) {
+        node->values.push_back(value);
+        return node;
+      } else if (key < node->key) {
+        if (node->left) {
+          node->left = insertNode(key, value, node->left);
+        } else {
+          node->left = new Node{key, {value}, nullptr, nullptr, 1};
+          nodeCount++;
+        }
+      } else {
+        if (node->right) {
+          node->right = insertNode(key, value, node->right);
+        } else {
+          node->right = new Node{key, {value}, nullptr, nullptr, 1};
+          nodeCount++;
+        }
+      }
+      updateHeight(node);
+      node = verifyBalance(node);
+      return node;
+    }
+
+    void insert(std::string key, int value) {
+      if (!root) {
+        nodeCount++;
+        root = new Node{key, {value}, nullptr, nullptr, 1};
+        treeHeight = root->height;
+        return;
+      }
+      root = insertNode(key, value, root);
+      treeHeight = root->height;
+    }
 
     int height() { return treeHeight; }
 
     int count() { return nodeCount; }
 
-    void clear() {}
+    void clear() {
+      clearTrees(root);
+      root = nullptr;
+      treeHeight = 0;
+      nodeCount = 0;
+    }
 
     std::vector<int> rootData() { 
       if (root)  
@@ -295,6 +354,10 @@ class AVLtree {
     }
 
     AVLtree() : treeHeight(0), nodeCount(0) {}
+
+    ~AVLtree() {
+      clear();
+    }
 };
 
 class IO {
@@ -315,9 +378,10 @@ class IO {
         std::istringstream iss(line);
         Data data;
         data.serialNumber = serialNumber++;
-        std::getline(iss, data.schoolCode, '\t');
+        std::string unusedField;
+        std::getline(iss, unusedField, '\t');
         std::getline(iss, data.schoolName, '\t');
-        std::getline(iss, data.departmentCode, '\t');
+        std::getline(iss, unusedField, '\t');
         std::getline(iss, data.departmentName, '\t');
         std::getline(iss, data.dayNight, '\t');
         std::getline(iss, data.level, '\t');
@@ -327,13 +391,12 @@ class IO {
         studentCountStr.erase(std::remove(studentCountStr.begin(), studentCountStr.end(), '"'), studentCountStr.end());
         studentCountStr.erase(std::remove(studentCountStr.begin(), studentCountStr.end(), ','), studentCountStr.end());
         data.studentCount = std::stoi(studentCountStr);
-        std::string teacherCountStr, graduateCountStr;
-        std::getline(iss, teacherCountStr, '\t');
+        std::string graduateCountStr;
+        std::getline(iss, unusedField, '\t');
         std::getline(iss, graduateCountStr, '\t');
-        data.teacherCount = std::stoi(teacherCountStr);
         data.graduateCount = std::stoi(graduateCountStr);
-        std::getline(iss, data.countyCity, '\t');
-        std::getline(iss, data.systemType, '\t');
+        std::getline(iss, unusedField, '\t');
+        std::getline(iss, unusedField, '\t');
         dataList.push_back(data);
       }
       file.close();
@@ -345,29 +408,12 @@ class IO {
       for (const auto& data : datas) {
         std::cout << serialIndex++ << ": [";
         std::cout << data.serialNumber << "] ";
-        std::cout << data.schoolName << " " << data.departmentName << " ";
-        std::cout << data.dayNight << " " << data.level << " ";
-        std::cout << data.studentCount << " " << data.graduateCount << "\n";
+        std::cout << data.schoolName << ", " << data.departmentName << ", ";
+        std::cout << data.dayNight << ", " << data.level << ", ";
+        std::cout << data.studentCount << ", " << data.graduateCount << "\n";
       }
     }
-
-    static void displayNodes(const std::vector<std::vector<Data>>& datas) {
-        int displayIndex = 1;
-        for (const auto& keyGroup : datas) {
-            for (const auto& data : keyGroup) {
-                std::cout << displayIndex++ << ": ";
-                std::cout << "[" << data.serialNumber << "] ";
-                
-                std::cout << data.schoolName << " " 
-                          << data.departmentName << " "
-                          << data.dayNight << " " 
-                          << data.level << " "
-                          << data.studentCount << " " 
-                          << data.graduateCount << "\n";
-            }
-        }
-    };
-  };
+};
 
 class Menu {
   private:
@@ -379,13 +425,16 @@ class Menu {
 
     void mission1() {
       while (true) {
-        std::cout << "Input a file number ([0] Quit): ";
+        dataListExist = false;
+        std::cout << "\nInput a file number ([0] Quit): ";
         std::string fileNumber;
         std::cin >> fileNumber;
-        if (fileNumber == "0")
+        if (fileNumber == "0") {
+          std::cout << "\n";
           return;
+        }
         if (!IO::readData(fileNumber, dataList)) {
-          std::cout << "\n### input" << fileNumber << ".txt does not exist! ###\n\n";
+          std::cout << "\n### input" << fileNumber << ".txt does not exist! ###\n";
         } else {
           break;
         }
@@ -413,9 +462,9 @@ class Menu {
           avlTree.insert(data.schoolName, data.serialNumber);
         }
       avlTreeExist = true;
-      }
-      if (avlTreeExist)
+      } else {
         std::cout << "### AVL tree has been built. ###\n";
+      }
       std::cout << "Tree height = " << avlTree.height() << "\n";
       std::cout << "Number of nodes = " << avlTree.count() << "\n";
       IO::displayNodes(makeNodesList(avlTree.rootData()));
@@ -431,32 +480,6 @@ class Menu {
       return nodesList;
     }
 
-    std::vector<std::vector<Data>> makeNodesList(const std::vector<std::vector<int>>& pairs) {
-        std::vector<std::vector<Data>> nodesList;
-
-        // 第一層迴圈：遍歷每一個「節點中的 Key」
-        for (size_t i = 0; i < pairs.size(); i++) {
-            std::vector<Data> currentKeyData; // 用來存放當前這個 Key 對應的所有 serial 資料
-
-            // 第二層迴圈：遍歷該 Key 擁有的所有 serial numbers
-            for (size_t j = 0; j < pairs[i].size(); j++) {
-                int targetSerial = pairs[i][j];
-
-                // 根據 serial number 找到對應的資料
-                // 提醒：如果你的 serial 是從 1 開始，索引要 -1
-                int index = targetSerial - 1;
-
-                if (index >= 0 && index < (int)dataList.size()) {
-                    currentKeyData.push_back(dataList[index]);
-                }
-            }
-
-            // 將這一組資料放入大容器中
-            nodesList.push_back(currentKeyData);
-        }
-
-        return nodesList;
-    }
   public:
     void run() {
       std::string choice;
