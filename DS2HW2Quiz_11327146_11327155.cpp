@@ -539,7 +539,7 @@ class Menu {
         std::cout << "### Choose 2 first. ###\n\n";
         return;
       }
-      std::cout << "\nEnter a college name to search: ";
+      std::cout << "Enter a college name to search: ";
       std::string collegeName;
       std::cin >> collegeName;
       std::vector<int> searchResultSerials = avlTree.search(collegeName);
@@ -548,7 +548,7 @@ class Menu {
         return;
       }
       auto nodesList = makeNodesList(searchResultSerials);
-      std::cout << "Enter K in [1," << nodesList.size() << "]: ";
+      std::cout << "\nEnter K in [1," << nodesList.size() << "]: ";
       std::string kStr;
       std::cin >> kStr;
       int k;
