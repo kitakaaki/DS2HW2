@@ -512,7 +512,7 @@ class Menu {
         std::cout << "### Choose 1 first. ###\n\n";
         return;
       }
-      std::cout << "Enter K in [1,"<< dataList.size() << "]: ";
+      std::cout << "\nEnter K in [1,"<< dataList.size() << "]: ";
       std::string kStr;
       std::cin >> kStr;
       int k;
