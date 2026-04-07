@@ -581,8 +581,17 @@ class Menu {
       std::sort(nodesList.begin(), nodesList.end(), [](const Data& a, const Data& b) {
         return a.graduateCount > b.graduateCount;
       });
+      int finalindex;
       for (int i = 0; i < k && i < (int)nodesList.size(); i++) {
         result.push_back(nodesList[i]);
+        finalindex = i;
+      }
+      for (int i = finalindex + 1; i < (int)nodesList.size(); i++) {
+        if (nodesList[i].graduateCount == nodesList[finalindex].graduateCount) {
+          result.push_back(nodesList[i]);
+        } else {
+          break;
+        }
       }
       return result;
     }
